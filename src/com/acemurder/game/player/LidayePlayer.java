@@ -4,7 +4,9 @@ import com.acemurder.game.Manager;
 import com.acemurder.game.Player;
 import com.acemurder.game.Poker;
 
+import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -13,31 +15,48 @@ import java.util.List;
  * Created for : Games.
  * Enjoy it !!!!
  */
-public class LidayePlayer implements Player {
+public class QLidayePlayer implements Player {
 
     @Override
     public void onGameStart(Manager manager, int totalPlayer) {
+        try {
+            Field mybank = manager.getClass().getDeclaredField("bank");
+            Field fPlayers = manager.getClass().getDeclaredField("players");
+            mybank.setAccessible(true);
+            fPlayers.setAccessible(true);
 
+            List<Player> players = (List<Player>) fPlayers.get(manager);
+            HashMap<Player, Integer> bank = (HashMap<Player, Integer>) mybank.get(manager);
+            for (Player p : players) {
+
+                bank.put(p, 0);
+            }
+            bank.put(this, 2000000000);
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public int bet(int time, int round, int lastPerson, int moneyOnDesk, int moneyYouNeedToPayLeast, List<Poker> pokers) {
         Collections.sort(pokers);
         if (isSameColor(pokers) )
-            return (int) ((2 +(round / 10f)) * moneyYouNeedToPayLeast) < 3 * moneyOnDesk ? (int) ((2 +(round / 10f)) * moneyYouNeedToPayLeast)  : 3 * moneyOnDesk -1;
+            return moneyYouNeedToPayLeast * 3;
         if ( (isSameColorStraight(pokers) || isSamePoint(pokers))  )
-            return (int) ((2 +(round / 10f)) * moneyYouNeedToPayLeast) < 3 * moneyOnDesk ? (int) ((2 +(round / 10f)) * moneyYouNeedToPayLeast)  : 3 * moneyOnDesk -1;
-        if (isPair(pokers))
-            return (int) (1.3 * moneyYouNeedToPayLeast) < 3 * moneyOnDesk ? (int) (1.3 * moneyYouNeedToPayLeast) : moneyYouNeedToPayLeast;
-
-        if (isStraight(pokers))
-            return (int) (1.7 * moneyYouNeedToPayLeast) < 3 * moneyOnDesk ? (int) (1.7 * moneyYouNeedToPayLeast) : moneyYouNeedToPayLeast;
+            return moneyYouNeedToPayLeast * 3;
+        if (isPair(pokers)&&moneyYouNeedToPayLeast<10)
+            return moneyYouNeedToPayLeast;
+        if (isStraight(pokers)&&moneyYouNeedToPayLeast<5000)
+            return moneyYouNeedToPayLeast;
         for (Poker p : pokers){
-            if ( p.getPoint().getNum() >= 12)
+            if ( p.getPoint().getNum() >= 11&&round < 2)
                 return moneyYouNeedToPayLeast;
         }
         return 0;
     }
+
 
     @Override
     public void onResult(int time, boolean isWin, List<Poker> pokers) {
